@@ -35,8 +35,8 @@ struct Servo
 	{
 		Serial Com(p9,p10);
 		for(int i=0;i<Servo_Num;i++) Com.printf("#%dP%d",i+1,Pos[i]);
-		Com.printf("T1000\r\n");
-		wait_ms(1000);
+		Com.printf("T100\r\n");
+		wait_ms(100);
 	}
 
 	//basic action for 6 feet robot
@@ -57,7 +57,7 @@ struct Servo
 	void Walk_towards(int N) //complete N period of walking towards, spending (N*4+2)*Standard_Rotate_Period.
 	{
 		Stand(); //initialization
-		int B_up_PWM=1900;
+		int B_up_PWM=2300;
 		for(int i=1;i<=N;i++)
 		{
 			//step 2
@@ -80,7 +80,7 @@ struct Servo
 	void Walk_backwards(int N) //complete N period of walking backwards, spending (N*4+2)*Standard_Rotate_Period.
 	{
 		Stand(); //initialization
-		int B_up_PWM=1900;
+		int B_up_PWM=2300;
 		for(int i=1;i<=N;i++)
 		{
 			//step 7
