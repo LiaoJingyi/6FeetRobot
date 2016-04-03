@@ -97,7 +97,7 @@ struct Servo
 		}
 		Stand();
 	}
-	void Walk_backwards(int N) //complete N period of walking backwards, spending (N*4+2)*Standard_Rotate_Period.
+	void Walk_backwards(int N) //complete N period of walking backwards, spending (N*4+2)*Standard_Rotate_Perd.
 	{
 		Stand(); //initialization
 		int B_up_PWM=2300;

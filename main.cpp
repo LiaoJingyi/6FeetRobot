@@ -1,51 +1,182 @@
-#include "Servo.h"
-#include "cstdio"
+#include <cstdio>
 
-#define DEBUG
-int main() {
-    
-    //Servo test;
-    //test.Stand();
-/*    
-    LocalFileSystem local("local");
-    if(freopen("/local/test.txt","r",stdin)==NULL) return 0;
-    char cmd[250];
+#ifndef Servo_Parameter
+#define Servo_Parameter
+#define Servo_Num 18
+#define Low_PWM 500
+#define Up_PWM 2500
+#define Init_PWM 1500
+#endif // Servo_Parameter
 
-#ifdef DEBUG
-    DigitalOut debug(LED1); debug=1;
-#endif
-    while(scanf("%s",cmd)==1)
-    {
-        Serial Com(p9,p10);
-        Com.printf("%s",cmd);
-        wait_ms(1000);
-    }
+struct Servo
+{
+	int Pos[Servo_Num];//[500,2500]
+	//initialize
+	Servo()
+	{ for(int i=0;i<Servo_Num;i++) Pos[i]=Init_PWM; }
+	Servo(const int *In_Data)
+	{ for(int i=0;i<Servo_Num;i++) Pos[i]=*(In_Data+i); }
 
-#ifdef DEBUG
-    debug=0;
-#endif
-    fclose(stdin);
-    
-    Serial pc(USBTX,USBRX);
-    pc.printf("Hello World!\n");
-    return 0;
-*/  
-    Serial Com(p9,p10);
-    
-    while(1)
-    {
-    Servo test;
-    test.Stand();
-    int dtime=500;
-    Com.printf("%s","#1P1300T500#2P2000T500#3P1800T500#4P1300T500#5P2000T500#6P1200T500#7P1300T500#8P2000T500#9P1500T500#10P1300T500#11P2000T500#12P1500T500#13P1300T500#14P2000T500#15P1200T500#16P1300T500#17P2000T500#18P1800T500\r\n");
-    wait_ms(dtime);
-    Com.printf("%s","#1P1500T500#2P1500T500#3P1500T500#4P1500T500#5P1500T500#6P1500T500#7P1500T500#8P1500T500#9P1500T500#10P1500T500#11P1500T500#12P1500T500#13P1500T500#14P1500T500#15P1500T500#16P1500T500#17P1500T500#18P1500T500\r\n");
-    wait_ms(dtime);
-    Com.printf("%s","#1P1500T500#2P800T500#3P1500T500#4P1500T500#5P800T500#6P1500T500#7P1500T500#8P800T500#9P1500T500#10P1500T500#11P800T500#12P1500T500#13P1500T500#14P800T500#15P1500T500#16P1500T500#17P800T500#18P1500T500\r\n");
-    wait_ms(dtime);
-    Com.printf("%s","#1P2200T500#2P800T500#3P1500T500#4P2200T500#5P800T500#6P1500T500#7P2200T500#8P800T500#9P1500T500#10P2200T500#11P800T500#12P1500T500#13P2200T500#14P800T500#15P1500T500#16P2200T500#17P800T500#18P1500T500\r\n");
-    wait_ms(dtime); 
-    Com.printf("%s","#1P2200T500#2P800T500#3P2000T500#4P2200T500#5P800T500#6P1500T500#7P2200T500#8P800T500#9P1500T500#10P2200T500#11P800T500#12P1500T500#13P2200T500#14P800T500#15P1000T500#16P2200T500#17P800T500#18P1500T500\r\n");
-    wait_ms(dtime); 
-    }
+	//action
+
+	//rotate 18 servos to Pos[] in t ms
+	//Attention: the number labled in servo controller is exact added 1.
+	void Rotate(int t)
+	{
+		for(int i=0;i<Servo_Num;i++) printf("#%dP%d",i+1,Pos[i]);
+		printf("T%d\r\n",t);
+	}
+	void Rotate()
+	{
+		for(int i=0;i<Servo_Num;i++) printf("#%dP%d",i+1,Pos[i]);
+		printf("T100\r\n");
+	}
+//===============================================
+	//basic action for 6 feet robot
+	void Stand()
+	{
+		//Defination of C_PWM and it won't change in the whole program, except in Drop().
+		int C_PWM=1300;
+
+		for(int i=0;i<Servo_Num/3;i++)
+		{
+			Pos[i*3+2]=Init_PWM;//A 1500
+			Pos[i*3+1]=(Init_PWM+Up_PWM)>>1;//B 2000
+			Pos[i*3]=C_PWM;//C 1300
+		}
+		Rotate();
+	}
+	//Drop down action, all servos is in initial status.
+	void Drop()
+	{
+		for(int i=0;i<Servo_Num;i++) Pos[i]=Init_PWM;
+		Rotate();
+	}
+	//all feet raise up
+	void Reverse_stand()
+	{
+		int C_PWM=1300;
+		for(int i=0;i<Servo_Num/3;i++)
+		{
+			Pos[i*3+2]=Init_PWM;//A 1500
+			Pos[i*3+1]=(Init_PWM+Low_PWM)>>1;//B 1000
+			Pos[i*3]=C_PWM;//C 1300
+		}
+		Rotate();
+	}
+
+//===============================================
+	//walk action
+	void Walk_towards(int N) //complete N period of walking towards, spending (N*4+2)*Standard_Rotate_Period.
+	{
+		Stand(); //initialization
+		int B_up_PWM=2300;
+		for(int i=1;i<=N;i++)
+		{
+			//step 2
+			Pos[4]=Pos[7]=Pos[16]=B_up_PWM;//up
+			Pos[2]=Pos[17]=1900; Pos[5]=Pos[14]=Init_PWM; Pos[8]=Pos[11]=1400;//pattern
+			Rotate();
+			//step 3
+			Pos[4]=Pos[7]=Pos[16]=(Init_PWM+Up_PWM)>>1;//down
+			Rotate();
+			//step 4
+			Pos[1]=Pos[10]=Pos[13]=B_up_PWM;//up
+			Pos[2]=Pos[17]=Init_PWM; Pos[5]=Pos[14]=1100; Pos[8]=Pos[11]=1600;//pattern
+			Rotate();
+			//step 5
+			Pos[1]=Pos[10]=Pos[13]=(Init_PWM+Up_PWM)>>1;//down
+			Rotate();
+		}
+		Stand();
+	}
+	void Walk_backwards(int N) //complete N period of walking backwards, spending (N*4+2)*Standard_Rotate_Period.
+	{
+		Stand(); //initialization
+		int B_up_PWM=2300;
+		for(int i=1;i<=N;i++)
+		{
+			//step 7
+			Pos[1]=Pos[10]=Pos[13]=B_up_PWM;//up
+			Pos[2]=Pos[17]=1900; Pos[5]=Pos[14]=Init_PWM; Pos[8]=Pos[11]=1400;//pattern
+			Rotate();
+			//step 8
+			Pos[1]=Pos[10]=Pos[13]=(Init_PWM+Up_PWM)>>1;//down
+			Rotate();
+			//step 9
+			Pos[4]=Pos[7]=Pos[16]=B_up_PWM;//up
+			Pos[2]=Pos[17]=Init_PWM; Pos[5]=Pos[14]=1100; Pos[8]=Pos[11]=1600;//pattern
+			Rotate();
+			//step 10 
+			Pos[4]=Pos[7]=Pos[16]=(Init_PWM+Up_PWM)>>1;//down
+			Rotate();
+		}
+		Stand();
+	}
+	void Anticlockwise(int N)
+	{
+		Stand();
+		int B_up_PWM=2300;
+		for(int i=1;i<=N;i++)
+		{
+			//step 12
+			Pos[1]=Pos[10]=Pos[13]=B_up_PWM;
+			Pos[2]=1900; Pos[5]=1100; Pos[8]=1400; Pos[11]=1600; Pos[14]=1500; Pos[17]=1500;
+			Rotate();
+			//step 13
+			Pos[1]=Pos[10]=Pos[13]=(Init_PWM+Up_PWM)>>1;
+			Rotate();
+			//step 14
+			Pos[1]=Pos[4]=Pos[7]=Pos[16]=B_up_PWM;
+			Pos[2]=1400; Pos[5]=1500; Pos[8]=1600; Pos[11]=1400; Pos[14]=1100; Pos[17]=1900;
+			Rotate();
+			//step 15
+			Pos[1]=Pos[4]=Pos[7]=Pos[16]=(Init_PWM+Up_PWM)>>1;
+			Rotate();
+		}
+		Stand();
+	}
+	void Clockwise(int N)
+	{
+		Stand();
+		int B_up_PWM=2300;
+		for(int i=1;i<=N;i++)
+		{
+			//step 17
+			Pos[4]=Pos[7]=Pos[16]=B_up_PWM;
+			Pos[2]=1900; Pos[5]=1100; Pos[8]=1400; Pos[11]=1600; Pos[14]=1600; Pos[17]=1400;
+			Rotate();
+			//step 18
+			Pos[4]=Pos[7]=Pos[16]=(Init_PWM+Up_PWM)>>1;
+			Rotate();
+			//step 19
+			Pos[1]=Pos[10]=Pos[13]=B_up_PWM;
+			Pos[2]=1400; Pos[5]=1600; Pos[8]=1600; Pos[11]=1400; Pos[14]=1100; Pos[17]=1900;
+			Rotate();
+			//step 20
+			Pos[1]=Pos[10]=Pos[13]=(Init_PWM+Up_PWM)>>1;
+			Rotate();
+		}
+		Stand();
+	}
+};
+int main()
+{
+	freopen("output.txt","w",stdout);
+	Servo test;
+	puts("Stand");
+	test.Stand();
+	puts("Drop");
+	test.Drop();
+	puts("Reverse_stand");
+	test.Reverse_stand();
+
+	puts("Walk_towards");
+	test.Walk_towards(1);
+	puts("Walk_backwards");
+	test.Walk_backwards(1);
+	puts("Anticlockwise");
+	test.Anticlockwise(1);
+	puts("Clockwise");
+	test.Clockwise(1);
 }
