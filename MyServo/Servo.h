@@ -38,7 +38,7 @@ struct Servo
 		Com.printf("T100\r\n");
 		wait_ms(100);
 	}
-
+//===============================================
 	//basic action for 6 feet robot
 	void Stand()
 	{
@@ -59,6 +59,20 @@ struct Servo
 		for(int i=0;i<Servo_Num;i++) Pos[i]=Init_PWM;
 		Rotate();
 	}
+	//all feet raise up
+	void Reverse_stand()
+	{
+		int C_PWM=1300;
+		for(int i=0;i<Servo_Num/3;i++)
+		{
+			Pos[i*3+2]=Init_PWM;//A 1500
+			Pos[i*3+1]=(Init_PWM+Low_PWM)>>1;//B 1000
+			Pos[i*3]=C_PWM;//C 1300
+		}
+		Rotate();
+	}
+
+//===============================================
 	//walk action
 	void Walk_towards(int N) //complete N period of walking towards, spending (N*4+2)*Standard_Rotate_Period.
 	{
